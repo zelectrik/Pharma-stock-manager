@@ -14,4 +14,8 @@ export const createMedicine = (data: Omit<Medicine, "id">): Medicine => {
   return newMedicine;
 };
 
+export const clearMedecines = () => {
+  medicines.length = 0;
+};
+
 export const getMedicines = () => medicines;

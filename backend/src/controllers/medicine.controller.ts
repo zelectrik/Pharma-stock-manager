@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { createMedicineSchema } from "../schemas/medicine.schema";
-import { createMedicine } from "../services/medicine.service";
+import { createMedicine, getMedicines } from "../services/medicine.service";
 
 export const createMedicineHandler = (req: Request, res: Response) => {
   const parsed = createMedicineSchema.safeParse(req.body);
@@ -14,4 +14,8 @@ export const createMedicineHandler = (req: Request, res: Response) => {
   const medicine = createMedicine(parsed.data);
 
   return res.status(201).json(medicine);
+};
+
+export const getMedicinesHandler = (_req: Request, res: Response) => {
+  return res.status(200).json(getMedicines());
 };
