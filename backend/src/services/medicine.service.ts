@@ -5,7 +5,7 @@ export type MedicineAlert =
   | "OUT_OF_STOCK"
   | "LOW_STOCK"
   | "EXPIRING_SOON"
-  | null;
+  | "EXPIRED";
 
 const medicines: Medicine[] = [];
 
@@ -30,18 +30,22 @@ export const getMedicineAlerts = () => {
 
     const daysBeforeExpiration =
       (expiration.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-    let alert: MedicineAlert = null;
+    const alerts: MedicineAlert[] = [];
     if (medicine.stock === 0) {
-      alert = "OUT_OF_STOCK";
+      alerts.push("OUT_OF_STOCK");
     } else if (medicine.stock < medicine.threshold) {
-      alert = "LOW_STOCK";
+      alerts.push("LOW_STOCK");
+    }
+
+    if (daysBeforeExpiration < 0) {
+      alerts.push("EXPIRED");
     } else if (daysBeforeExpiration < 30) {
-      alert = "EXPIRING_SOON";
+      alerts.push("EXPIRING_SOON");
     }
 
     return {
       ...medicine,
-      alert,
+      alerts,
     };
   });
 };
