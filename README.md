@@ -1,29 +1,24 @@
-# Pharma Stock Manager
+# 🚀 Pharma Stock Manager
 
-Mini-projet full-stack simulant un système de gestion de stock pour des pharmacies.
+Mini-projet backend simulant un système de gestion de stock pour des pharmacies.
 
-L’objectif est de démontrer une approche pragmatique du développement backend :
-
-- structuration claire du code
-- validation des données
-- tests automatisés
-- qualité et maintenabilité
+> 🎯 Objectif : démontrer une approche **propre, testée et orientée métier** du développement backend.
 
 ---
 
-## Contexte
+## 🧠 Contexte
 
-Ce projet s’inspire de problématiques réelles rencontrées dans des systèmes de gestion de pharmacies :
+Ce projet s’inspire de problématiques réelles :
 
-- gestion des ruptures de stock
-- suivi des dates de péremption
-- fiabilité des données manipulées
+- 💊 Anticipation des ruptures de stock
+- ⏳ Suivi des dates de péremption
+- 📊 Fiabilité des données critiques
 
-Il vise à reproduire un socle technique simple mais réaliste.
+➡️ L’objectif est de reproduire un **socle technique réaliste**, proche d’un produit utilisé en production.
 
 ---
 
-## Stack
+## 🛠️ Stack
 
 ### Backend
 
@@ -34,133 +29,171 @@ Il vise à reproduire un socle technique simple mais réaliste.
 - Vitest (tests)
 - Supertest (tests API)
 
-### Frontend
-
-- React (à venir)
-- TypeScript
-
 ---
 
-## Fonctionnalités actuelles
+## ✨ Fonctionnalités
 
-- Health check API
-- Création d’un médicament
-- Validation des données entrantes
-- Tests d’intégration API
-
----
-
-## API
-
-### Health check
+### 🟢 Health check
 
 GET /health
 
-### Créer un médicament
+---
+
+### ➕ Création d’un médicament
 
 POST /medicines
 
-Exemple de payload :
+Exemple :
 
-{
-"name": "Doliprane",
-"stock": 100,
-"threshold": 10,
-"expirationDate": "2026-01-01"
-}
-
----
-
-## Architecture
-
-Le backend est structuré selon une séparation claire des responsabilités :
-
-- routes : définition des endpoints HTTP
-- controllers : gestion des requêtes et réponses
-- services : logique métier
-- schemas : validation des données (Zod)
-- types : définition des modèles
-
-Cette organisation permet :
-
-- une meilleure lisibilité du code
-- une isolation de la logique métier
-- une facilité de test
-- une évolutivité du projet
+    {
+      "name": "Doliprane",
+      "stock": 100,
+      "threshold": 10,
+      "expirationDate": "2026-01-01"
+    }
 
 ---
 
-## Tests
+### 📦 Liste des médicaments
 
-Les tests sont des tests d’intégration API.
-
-Ils permettent de :
-
-- vérifier le comportement des endpoints HTTP
-- valider les règles métiers
-- tester les cas invalides
-
-Une approche paramétrée est utilisée pour couvrir plusieurs cas invalides sans duplication de code.
+GET /medicines
 
 ---
 
-## Choix techniques
+### 🚨 Alertes métier
 
-- TypeScript pour sécuriser le code et améliorer la maintenabilité
-- Zod pour centraliser et rendre explicite la validation des données
-- Vitest pour des tests rapides et modernes
-- Supertest pour tester les endpoints HTTP sans lancer de serveur externe
+GET /medicines/alerts
 
-Le projet privilégie une approche simple et pragmatique pour rester lisible et évolutif.
+Un médicament peut avoir plusieurs alertes :
 
----
+- 🔴 OUT_OF_STOCK
+- 🟠 LOW_STOCK
+- 🟡 EXPIRING_SOON
+- ⚫ EXPIRED
 
-## Lancer le backend
-
-cd backend  
-npm install  
-npm run dev
+➡️ Un médicament peut cumuler plusieurs états (réalité métier).
 
 ---
 
-## Tests
+## 🏗️ Architecture
 
-cd backend  
-npm run typecheck  
-npm run test
+### Vue simplifiée
 
----
-
-## Améliorations possibles
-
-- persistance des données (PostgreSQL)
-- gestion des alertes :
-  - stock faible
-  - rupture
-  - péremption proche
-- ajout d’un système d’authentification
-- mise en place d’une CI/CD complète
-- monitoring et logs
+Requête HTTP → Route → Controller → Service → Données
 
 ---
 
-## Vision produit
+### Diagramme
 
-Dans un contexte réel, ce type de système permettrait :
+```mermaid
+flowchart LR
+    Client -->|HTTP| Route
+    Route --> Controller
+    Controller --> Service
+    Service --> Store[(InMemory)]
+    Service --> Validation[Zod]
+```
 
-- d’anticiper les ruptures de médicaments
-- de réduire les pertes liées aux péremptions
-- d’améliorer le suivi des patients
+---
+
+### Explication
+
+- **Routes** → mapping HTTP
+- **Controllers** → gestion requêtes
+- **Services** → logique métier
+- **Schemas** → validation
+- **Store** → données (en mémoire)
+
+➡️ Objectif : **séparation claire des responsabilités**
 
 ---
 
-## Objectif
+## 🧪 Tests
 
-Ce projet a pour but de démontrer :
+Tests d’intégration API :
 
-- une capacité à structurer un backend propre
-- une approche orientée qualité (tests, validation)
-- une compréhension des problématiques métier
-- une logique d’amélioration continue
+- ✔ validation des endpoints
+- ✔ règles métier
+- ✔ cas invalides
+- ✔ scénarios réalistes
+
+➡️ Les données sont reset entre chaque test.
 
 ---
+
+## ⚙️ Choix techniques
+
+- TypeScript → sécurité & lisibilité
+- Zod → validation centralisée
+- séparation controller/service → testabilité
+- in-memory → simplicité & focus métier
+
+---
+
+## ▶️ Lancer le projet
+
+    cd backend
+    npm install
+    npm run dev
+
+---
+
+## 🧪 Lancer les tests
+
+    cd backend
+    npm run typecheck
+    npm run test
+
+---
+
+## 🔁 Version Node
+
+Utilise `.nvmrc` :
+
+    nvm use
+
+---
+
+## 🚀 Améliorations possibles
+
+- PostgreSQL
+- Authentification
+- Pagination / filtres
+- CI/CD (GitHub Actions)
+- Monitoring / logs
+- Frontend React
+
+---
+
+## 🌍 Vision produit
+
+Ce type de système permettrait :
+
+- d’anticiper les ruptures
+- de réduire les pertes
+- d’améliorer le suivi patient
+- d’aider à la décision
+
+---
+
+## 🎯 Objectif du projet
+
+Montrer :
+
+- 🧩 structuration backend
+- 🧪 approche orientée qualité
+- 🧠 compréhension métier
+- 📈 capacité d’évolution
+
+---
+
+## 💡 Points forts
+
+- Architecture claire
+- Tests solides
+- Logique métier réaliste
+- Code lisible et évolutif
+
+---
+
+> 💥 Projet conçu pour être **présentable en entretien** et démontrer des compétences concrètes.
