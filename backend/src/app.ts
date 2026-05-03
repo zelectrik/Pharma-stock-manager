@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import medicineRoutes from "./routes/medicine.routes";
 
 export const app = express();
 
@@ -12,3 +13,5 @@ app.get("/health", (_req, res) => {
     service: "pharma-stock-api",
   });
 });
+
+app.use("/medicines", medicineRoutes);
