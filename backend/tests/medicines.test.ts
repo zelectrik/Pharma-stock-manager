@@ -1,10 +1,10 @@
 import request from "supertest";
 import { beforeEach, describe, it, expect } from "vitest";
 import { app } from "../src/app";
-import { clearMedecines } from "../src/services/medicine.service";
+import { clearMedicines } from "../src/services/medicine.service";
 
 beforeEach(() => {
-  clearMedecines();
+  clearMedicines();
 });
 
 describe("POST /medicines", () => {
