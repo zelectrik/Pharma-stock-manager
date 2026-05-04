@@ -60,8 +60,3 @@ export const getMedicineAlerts = async () => {
     };
   });
 };
-
-// For testing purpose only
-export const clearMedicines = async () => {
-  await prisma.medicine.deleteMany();
-};

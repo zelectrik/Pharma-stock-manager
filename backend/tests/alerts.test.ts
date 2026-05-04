@@ -1,13 +1,10 @@
 import request from "supertest";
-import { describe, it, expect, beforeEach } from "vitest";
+import { beforeEach, afterAll, describe, it, expect } from "vitest";
 import { app } from "../src/app";
-import { clearMedicines } from "../src/services/medicine.service";
+import { prisma } from "../src/lib/prisma";
+import { clearTestDatabase } from "./helpers/database";
 
 describe("GET /medicines/alerts", () => {
-  beforeEach(() => {
-    clearMedicines();
-  });
-
   const dateInDays = (days: number) => {
     return new Date(Date.now() + days * 24 * 60 * 60 * 1000)
       .toISOString()
