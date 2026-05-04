@@ -1,5 +1,4 @@
-import { Medicine } from "../types/medicine";
-import { randomUUID } from "crypto";
+import { prisma } from "../lib/prisma";
 
 export type MedicineAlert =
   | "OUT_OF_STOCK"
@@ -7,22 +6,34 @@ export type MedicineAlert =
   | "EXPIRING_SOON"
   | "EXPIRED";
 
-const medicines: Medicine[] = [];
-
-export const createMedicine = (data: Omit<Medicine, "id">): Medicine => {
-  const newMedicine: Medicine = {
-    id: randomUUID(),
-    ...data,
-  };
-
-  medicines.push(newMedicine);
-
-  return newMedicine;
+type CreateMedicineInput = {
+  name: string;
+  stock: number;
+  threshold: number;
+  expirationDate: string;
 };
 
-export const getMedicines = () => medicines;
+export const createMedicine = async (data: CreateMedicineInput) => {
+  return prisma.medicine.create({
+    data: {
+      name: data.name,
+      stock: data.stock,
+      threshold: data.threshold,
+      expirationDate: new Date(data.expirationDate),
+    },
+  });
+};
 
-export const getMedicineAlerts = () => {
+export const getMedicines = async () => {
+  return prisma.medicine.findMany({
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+};
+
+export const getMedicineAlerts = async () => {
+  const medicines = await getMedicines();
   const now = new Date();
 
   return medicines.map((medicine) => {
@@ -51,6 +62,6 @@ export const getMedicineAlerts = () => {
 };
 
 // For testing purpose only
-export const clearMedicines = () => {
-  medicines.length = 0;
+export const clearMedicines = async () => {
+  await prisma.medicine.deleteMany();
 };
