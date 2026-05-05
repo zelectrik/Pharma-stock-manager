@@ -44,6 +44,14 @@ export const createMedicineBatchHandler = async (
   req: Request,
   res: Response,
 ) => {
+  const { medicineProductId } = req.params;
+
+  if (typeof medicineProductId !== "string") {
+    return res.status(400).json({
+      error: "Invalid medicine product id",
+    });
+  }
+
   const parsed = createMedicineBatchSchema.safeParse(req.body);
 
   if (!parsed.success) {
@@ -53,7 +61,10 @@ export const createMedicineBatchHandler = async (
   }
 
   try {
-    const medicineBatch = await createMedicineBatch(parsed.data);
+    const medicineBatch = await createMedicineBatch({
+      ...parsed.data,
+      medicineProductId,
+    });
     return res.status(201).json(medicineBatch);
   } catch (error) {
     if (error instanceof Error && error.cause === "PRODUCT_NOT_FOUND") {

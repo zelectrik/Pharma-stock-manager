@@ -9,10 +9,15 @@ import {
 
 const router = Router();
 
-router.get("/inventory/alerts", getInventoryWithAlertsHandler);
-router.get("/inventory", getInventoryHandler);
+//products
 router.get("/products", getMedicineProductsHandler);
 router.post("/products", createMedicineProductHandler);
-router.post("/batches", createMedicineBatchHandler);
+
+// batches
+router.post("/products/:medicineProductId/batches", createMedicineBatchHandler);
+
+// inventory
+router.get("/inventory/alerts", getInventoryWithAlertsHandler);
+router.get("/inventory", getInventoryHandler);
 
 export default router;
