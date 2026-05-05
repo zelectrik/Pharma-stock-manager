@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getMedicines, getAlerts } from "./api/medicinesApi";
 import type { Medicine, MedicineAlert } from "./types/medicine";
+import MedicineForm from "./components/MedicineForm";
 import "./App.css";
 
 function App() {
@@ -9,18 +10,46 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [medicinesData, alertsData] = await Promise.all([
+        getMedicines(),
+        getAlerts(),
+      ]);
+
+      setMedicines(medicinesData);
+      setAlerts(alertsData);
+    } catch {
+      setError("Unable to refresh data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    Promise.all([getMedicines(), getAlerts()])
-      .then(([medicinesData, alertsData]) => {
+    const loadInitialData = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [medicinesData, alertsData] = await Promise.all([
+          getMedicines(),
+          getAlerts(),
+        ]);
+
         setMedicines(medicinesData);
         setAlerts(alertsData);
-      })
-      .catch(() => {
+      } catch {
         setError("Unable to load dashboard data");
-      })
-      .finally(() => {
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    loadInitialData();
   }, []);
 
   const totalMedicines = medicines.length;
@@ -62,6 +91,10 @@ function App() {
           <span>Low stock</span>
           <strong>{lowStockCount}</strong>
         </article>
+      </section>
+
+      <section className="panel">
+        <MedicineForm onCreated={refresh} />
       </section>
 
       <section className="panel">
