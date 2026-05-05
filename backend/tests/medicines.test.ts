@@ -1,11 +1,8 @@
 import request from "supertest";
-import { beforeEach, describe, it, expect } from "vitest";
+import { beforeEach, afterAll, describe, it, expect } from "vitest";
 import { app } from "../src/app";
-import { clearMedicines } from "../src/services/medicine.service";
-
-beforeEach(() => {
-  clearMedicines();
-});
+import { prisma } from "../src/lib/prisma";
+import { clearTestDatabase } from "./helpers/database";
 
 describe("POST /medicines", () => {
   it("should create a medicine and return 201", async () => {
@@ -19,7 +16,13 @@ describe("POST /medicines", () => {
     const response = await request(app).post("/medicines").send(payload);
 
     expect(response.status).toBe(201);
-    expect(response.body).toMatchObject(payload);
+    expect(response.body).toMatchObject({
+      name: payload.name,
+      stock: payload.stock,
+      threshold: payload.threshold,
+      expirationDate: `${payload.expirationDate}T00:00:00.000Z`,
+    });
+    //expect(response.body).toMatchObject(payload);
     expect(response.body).toHaveProperty("id");
   });
 
