@@ -1,122 +1,128 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useState } from "react";
+import { getMedicines, getAlerts } from "./api/medicinesApi";
+import type { Medicine, MedicineAlert } from "./types/medicine";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [alerts, setAlerts] = useState<MedicineAlert[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([getMedicines(), getAlerts()])
+      .then(([medicinesData, alertsData]) => {
+        setMedicines(medicinesData);
+        setAlerts(alertsData);
+      })
+      .catch(() => {
+        setError("Unable to load dashboard data");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  const totalMedicines = medicines.length;
+  const totalStock = medicines.reduce(
+    (sum, medicine) => sum + medicine.stock,
+    0,
+  );
+  const lowStockCount = medicines.filter((m) => m.stock < m.threshold).length;
+
+  const getMedicineAlerts = (medicineId: string) => {
+    const alert = alerts.find((a) => a.id === medicineId);
+    return alert ? alert.alerts : [];
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+    <main className="app">
+      <section className="hero">
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+          <p className="eyebrow">Pharmacy inventory dashboard</p>
+          <h1>Pharma Stock Manager</h1>
+          <p className="subtitle">
+            Monitor medicine inventory, stock thresholds and expiration risks.
           </p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
       </section>
 
-      <div className="ticks"></div>
+      <section className="stats-grid">
+        <article className="stat-card">
+          <span>Total medicines</span>
+          <strong>{totalMedicines}</strong>
+        </article>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
+        <article className="stat-card">
+          <span>Total stock</span>
+          <strong>{totalStock}</strong>
+        </article>
+
+        <article className="stat-card warning">
+          <span>Low stock</span>
+          <strong>{lowStockCount}</strong>
+        </article>
       </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <h2>Medicines</h2>
+            <p>Current stock overview</p>
+          </div>
+        </div>
+
+        {loading && <p className="state">Loading medicines...</p>}
+        {error && <p className="state error">{error}</p>}
+
+        {!loading && !error && (
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Stock</th>
+                  <th>Expiration</th>
+                  <th>Alerts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {medicines.map((medicine) => {
+                  const medicineAlerts = getMedicineAlerts(medicine.id);
+
+                  return (
+                    <tr key={medicine.id}>
+                      <td>{medicine.name}</td>
+                      <td>{medicine.stock}</td>
+                      <td>
+                        {new Date(medicine.expirationDate).toLocaleDateString()}
+                      </td>
+                      <td>
+                        <div className="badges">
+                          {medicineAlerts.length === 0 ? (
+                            <span className="badge success">OK</span>
+                          ) : (
+                            medicineAlerts.map((alert) => (
+                              <span
+                                key={alert}
+                                className={`badge ${alert.toLowerCase()}`}
+                              >
+                                {alert.replaceAll("_", " ")}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </main>
+  );
 }
 
-export default App
+export default App;
