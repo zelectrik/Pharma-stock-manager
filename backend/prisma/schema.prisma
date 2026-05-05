@@ -6,12 +6,23 @@ datasource db {
   provider = "postgresql"
 }
 
-model Medicine {
-  id             String   @id @default(uuid())
-  name           String
-  stock          Int
-  threshold      Int
-  expirationDate DateTime
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+model MedicineBatch {
+  id                String   @id @default(uuid())
+  medicineProductId String
+  quantity          Int
+  expirationDate    DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  medicineProduct MedicineProduct @relation(fields: [medicineProductId], references: [id])
+}
+
+model MedicineProduct {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  threshold Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  batches MedicineBatch[]
 }
