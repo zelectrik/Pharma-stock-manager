@@ -1,199 +1,175 @@
 # 🚀 Pharma Stock Manager
 
-Mini-projet backend simulant un système de gestion de stock pour des pharmacies.
+[![CI](https://img.shields.io/badge/CI-passing-brightgreen)]()
+[![Node](https://img.shields.io/badge/node-22+-blue)]()
+[![Tests](https://img.shields.io/badge/tests-vitest-orange)]()
 
-> 🎯 Objectif : démontrer une approche **propre, testée et orientée métier** du développement backend.
+Backend project simulating a pharmacy stock management system, designed to reflect **real-world production practices**.
 
----
-
-## 🧠 Contexte
-
-Ce projet s’inspire de problématiques réelles :
-
-- 💊 Anticipation des ruptures de stock
-- ⏳ Suivi des dates de péremption
-- 📊 Fiabilité des données critiques
-
-➡️ L’objectif est de reproduire un **socle technique réaliste**, proche d’un produit utilisé en production.
+> 🎯 Goal: showcase strong backend fundamentals, testing strategy, and production-ready architecture.
 
 ---
 
-## 🛠️ Stack
+## 🧠 Business Context
 
-### Backend
+Inspired by real pharmacy challenges:
 
-- Node.js
-- TypeScript
+- 💊 Prevent stock shortages
+- ⏳ Track expiration dates
+- 📊 Ensure data reliability
+
+➡️ Focus: **business logic + engineering quality**
+
+---
+
+## 🛠️ Tech Stack
+
+**Backend**
+
+- Node.js + TypeScript
 - Express
-- Zod (validation)
-- Vitest (tests)
-- Supertest (tests API)
+- Prisma ORM
+- PostgreSQL (Supabase)
+- Zod
+
+**Testing**
+
+- Vitest
+- Supertest
+- Docker (isolated DB)
+
+**DevOps**
+
+- GitHub Actions
+- Vercel
+- Docker
 
 ---
 
-## ✨ Fonctionnalités
+## ✨ API
 
-### 🟢 Health check
+### Health
 
 GET /health
 
----
-
-### ➕ Création d’un médicament
+### Create medicine
 
 POST /medicines
 
-Exemple :
+```json
+{
+  "name": "Doliprane",
+  "stock": 100,
+  "threshold": 10,
+  "expirationDate": "2026-01-01"
+}
+```
 
-    {
-      "name": "Doliprane",
-      "stock": 100,
-      "threshold": 10,
-      "expirationDate": "2026-01-01"
-    }
-
----
-
-### 📦 Liste des médicaments
+### List
 
 GET /medicines
 
----
-
-### 🚨 Alertes métier
+### Alerts
 
 GET /medicines/alerts
-
-Un médicament peut avoir plusieurs alertes :
-
-- 🔴 OUT_OF_STOCK
-- 🟠 LOW_STOCK
-- 🟡 EXPIRING_SOON
-- ⚫ EXPIRED
-
-➡️ Un médicament peut cumuler plusieurs états (réalité métier).
 
 ---
 
 ## 🏗️ Architecture
 
-### Vue simplifiée
-
-Requête HTTP → Route → Controller → Service → Données
-
----
-
-### Diagramme
-
 ```mermaid
 flowchart LR
-    Client -->|HTTP| Route
-    Route --> Controller
-    Controller --> Service
-    Service --> Store[(InMemory)]
-    Service --> Validation[Zod]
+Client --> Route
+Route --> Controller
+Controller --> Service
+Service --> Prisma
+Prisma --> DB[(PostgreSQL)]
+Controller --> Validation[Zod]
 ```
 
 ---
 
-### Explication
+## 🧪 Testing Strategy
 
-- **Routes** → mapping HTTP
-- **Controllers** → gestion requêtes
-- **Services** → logique métier
-- **Schemas** → validation
-- **Store** → données (en mémoire)
-
-➡️ Objectif : **séparation claire des responsabilités**
+- Integration tests (no mocks)
+- Real DB (Docker)
+- Clean state per run
+- Deterministic results
 
 ---
 
-## 🧪 Tests
+## ⚙️ CI Pipeline
 
-Tests d’intégration API :
+- install
+- typecheck
+- prisma migrate
+- test (Docker DB)
+- build
 
-- ✔ validation des endpoints
-- ✔ règles métier
-- ✔ cas invalides
-- ✔ scénarios réalistes
-
-➡️ Les données sont reset entre chaque test.
-
----
-
-## ⚙️ Choix techniques
-
-- TypeScript → sécurité & lisibilité
-- Zod → validation centralisée
-- séparation controller/service → testabilité
-- in-memory → simplicité & focus métier
+➡️ Prevents broken code reaching main
 
 ---
 
-## ▶️ Lancer le projet
+## 🚀 Deployment
 
-    cd backend
-    npm install
-    npm run dev
-
----
-
-## 🧪 Lancer les tests
-
-    cd backend
-    npm run typecheck
-    npm run test
+- Vercel
+- Fails on TS errors
+- Uses Supabase pooler
 
 ---
 
-## 🔁 Version Node
+## ▶️ Run locally
 
-Utilise `.nvmrc` :
-
-    nvm use
-
----
-
-## 🚀 Améliorations possibles
-
-- PostgreSQL
-- Authentification
-- Pagination / filtres
-- CI/CD (GitHub Actions)
-- Monitoring / logs
-- Frontend React
+```bash
+cd backend
+npm install
+npm run dev
+```
 
 ---
 
-## 🌍 Vision produit
+## 🧪 Run tests
 
-Ce type de système permettrait :
-
-- d’anticiper les ruptures
-- de réduire les pertes
-- d’améliorer le suivi patient
-- d’aider à la décision
+```bash
+npm run test
+npm run test:integration
+```
 
 ---
 
-## 🎯 Objectif du projet
+## 🔐 ENV
 
-Montrer :
-
-- 🧩 structuration backend
-- 🧪 approche orientée qualité
-- 🧠 compréhension métier
-- 📈 capacité d’évolution
+```
+DATABASE_URL=...
+```
 
 ---
 
-## 💡 Points forts
+## 💡 Technical Decisions
 
-- Architecture claire
-- Tests solides
-- Logique métier réaliste
-- Code lisible et évolutif
+- No mocks → realism over speed
+- Docker DB → isolation
+- Prisma → type-safe queries
+- Zod → runtime validation
 
 ---
 
-> 💥 Projet conçu pour être **présentable en entretien** et démontrer des compétences concrètes.
+## 📈 Next steps
+
+- Auth (JWT)
+- Pagination
+- Monitoring
+- Frontend
+
+---
+
+## 🎯 Takeaways
+
+- Clean architecture
+- Real DB testing
+- CI/CD pipeline
+- Production mindset
+
+---
+
+💥 Built to stand out in backend interviews
