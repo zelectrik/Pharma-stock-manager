@@ -1,6 +1,6 @@
 import type { Medicine, MedicineAlert } from "../types/medicine";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = "/api";
 
 export const getMedicines = async (): Promise<Medicine[]> => {
   const res = await fetch(`${API_URL}/medicines`);
