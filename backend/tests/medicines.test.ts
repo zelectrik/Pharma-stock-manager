@@ -1,64 +1,55 @@
 import request from "supertest";
-import { beforeEach, afterAll, describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { app } from "../src/app";
-import { prisma } from "../src/lib/prisma";
-import { clearTestDatabase } from "./helpers/database";
 
-describe("POST /medicines", () => {
-  it("should create a medicine and return 201", async () => {
+describe("POST /medicines/products", () => {
+  it("should create a medicine product and return 201", async () => {
     const payload = {
-      name: "Doliprane",
-      stock: 100,
+      name: "   DoliPrane  ",
       threshold: 10,
-      expirationDate: "2026-01-01",
     };
 
-    const response = await request(app).post("/medicines").send(payload);
+    const response = await request(app)
+      .post("/medicines/products")
+      .send(payload);
 
     expect(response.status).toBe(201);
     expect(response.body).toMatchObject({
-      name: payload.name,
-      stock: payload.stock,
+      name: "doliprane",
       threshold: payload.threshold,
-      expirationDate: `${payload.expirationDate}T00:00:00.000Z`,
     });
-    //expect(response.body).toMatchObject(payload);
     expect(response.body).toHaveProperty("id");
+    expect(response.body).toHaveProperty("createdAt");
+    expect(response.body).toHaveProperty("updatedAt");
+  });
+
+  it("should return 409 if medicine product name already exists", async () => {
+    const payload = {
+      name: "   DoliPrane",
+      threshold: 10,
+    };
+
+    await request(app).post("/medicines/products").send(payload);
+
+    const response = await request(app).post("/medicines/products").send({
+      name: "DOLIPRANE",
+      threshold: 20,
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toHaveProperty("error");
   });
 
   it.each([
     ["empty payload", {}],
-    [
-      "empty name",
-      {
-        name: "",
-        stock: 10,
-        threshold: 5,
-        expirationDate: "2026-01-01",
-      },
-    ],
-    [
-      "negative stock",
-      {
-        name: "Doliprane",
-        stock: -1,
-        threshold: 5,
-        expirationDate: "2026-01-01",
-      },
-    ],
-    [
-      "invalid expiration date",
-      {
-        name: "Doliprane",
-        stock: 10,
-        threshold: 5,
-        expirationDate: "invalid-date",
-      },
-    ],
+    ["empty name", { name: "", threshold: 10 }],
+    ["negative threshold", { name: "Doliprane", threshold: -1 }],
   ])(
-    "should return 400 for invalid payload: %s",
+    "should return 400 for invalid product payload: %s",
     async (_caseName, payload) => {
-      const response = await request(app).post("/medicines").send(payload);
+      const response = await request(app)
+        .post("/medicines/products")
+        .send(payload);
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("error");
@@ -66,41 +57,139 @@ describe("POST /medicines", () => {
   );
 });
 
-describe("GET /medicines", () => {
-  it("should return all created medicines", async () => {
-    const firstPayload = {
+describe("GET /medicines/products", () => {
+  it("should return all created medicine products", async () => {
+    await request(app).post("/medicines/products").send({
       name: "Doliprane",
-      stock: 100,
       threshold: 10,
-      expirationDate: "2026-01-01",
-    };
+    });
 
-    const secondPayload = {
+    await request(app).post("/medicines/products").send({
       name: "Ibuprofene",
-      stock: 50,
       threshold: 5,
-      expirationDate: "2026-06-01",
-    };
+    });
 
-    const firstCreateResponse = await request(app)
-      .post("/medicines")
-      .send(firstPayload);
+    const response = await request(app).get("/medicines/products");
 
-    const getResponse1 = await request(app).get("/medicines");
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(2);
 
-    expect(getResponse1.status).toBe(200);
-    expect(getResponse1.body).toEqual([firstCreateResponse.body]);
+    expect(response.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "doliprane",
+          threshold: 10,
+        }),
+        expect.objectContaining({
+          name: "ibuprofene",
+          threshold: 5,
+        }),
+      ]),
+    );
+  });
+});
 
-    const secondCreateResponse = await request(app)
-      .post("/medicines")
-      .send(secondPayload);
+describe("POST /medicines/products/:medicineProductId/batches", () => {
+  it("should create a batch for an existing medicine product", async () => {
+    const productResponse = await request(app)
+      .post("/medicines/products")
+      .send({
+        name: "Doliprane",
+        threshold: 10,
+      });
 
-    const getResponse2 = await request(app).get("/medicines");
+    const productId = productResponse.body.id;
 
-    expect(getResponse2.status).toBe(200);
-    expect(getResponse2.body).toEqual([
-      firstCreateResponse.body,
-      secondCreateResponse.body,
-    ]);
+    const response = await request(app)
+      .post(`/medicines/products/${productId}/batches`)
+      .send({
+        quantity: 50,
+        expirationDate: "2026-06-30",
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toMatchObject({
+      medicineProductId: productId,
+      quantity: 50,
+      expirationDate: "2026-06-30T00:00:00.000Z",
+    });
+    expect(response.body).toHaveProperty("id");
+  });
+
+  it("should return 404 if medicine product does not exist", async () => {
+    const response = await request(app)
+      .post("/medicines/products/fake-product-id/batches")
+      .send({
+        quantity: 50,
+        expirationDate: "2026-06-30",
+      });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toHaveProperty("error");
+  });
+
+  it.each([
+    ["empty payload", {}],
+    ["negative quantity", { quantity: -1, expirationDate: "2026-06-30" }],
+    [
+      "invalid expiration date",
+      { quantity: 10, expirationDate: "invalid-date" },
+    ],
+  ])(
+    "should return 400 for invalid batch payload: %s",
+    async (_caseName, payload) => {
+      const productResponse = await request(app)
+        .post("/medicines/products")
+        .send({
+          name: "Doliprane",
+          threshold: 10,
+        });
+
+      const productId = productResponse.body.id;
+
+      const response = await request(app)
+        .post(`/medicines/products/${productId}/batches`)
+        .send(payload);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty("error");
+    },
+  );
+});
+
+describe("GET /medicines/inventory", () => {
+  it("should return inventory grouped by medicine product with total quantity", async () => {
+    const productResponse = await request(app)
+      .post("/medicines/products")
+      .send({
+        name: "Doliprane",
+        threshold: 20,
+      });
+
+    const productId = productResponse.body.id;
+
+    await request(app).post(`/medicines/products/${productId}/batches`).send({
+      quantity: 10,
+      expirationDate: "2026-06-30",
+    });
+
+    await request(app).post(`/medicines/products/${productId}/batches`).send({
+      quantity: 15,
+      expirationDate: "2026-07-30",
+    });
+
+    const response = await request(app).get("/medicines/inventory");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(1);
+
+    expect(response.body[0]).toMatchObject({
+      id: productId,
+      name: "doliprane",
+      threshold: 20,
+      totalQuantity: 25,
+    });
+
+    expect(response.body[0].batches).toHaveLength(2);
   });
 });

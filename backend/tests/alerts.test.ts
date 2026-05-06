@@ -1,84 +1,126 @@
 import request from "supertest";
-import { beforeEach, afterAll, describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { app } from "../src/app";
-import { prisma } from "../src/lib/prisma";
-import { clearTestDatabase } from "./helpers/database";
 
-describe("GET /medicines/alerts", () => {
-  const dateInDays = (days: number) => {
-    return new Date(Date.now() + days * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0];
-  };
+const futureDate = (days: number) =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-  it("should return correct alerts for medicines", async () => {
-    await request(app)
-      .post("/medicines")
-      .send({
-        name: "Out of stock",
-        stock: 0,
-        threshold: 5,
-        expirationDate: dateInDays(31),
-      });
+const pastDate = (days: number) =>
+  new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-    await request(app)
-      .post("/medicines")
-      .send({
-        name: "Low stock",
-        stock: 2,
-        threshold: 5,
-        expirationDate: dateInDays(31),
-      });
+const createProduct = async (name: string, threshold: number) => {
+  const response = await request(app).post("/medicines/products").send({
+    name,
+    threshold,
+  });
 
-    await request(app)
-      .post("/medicines")
-      .send({
-        name: "Expiring soon",
-        stock: 10,
-        threshold: 5,
-        expirationDate: dateInDays(10),
-      });
+  expect(response.status).toBe(201);
 
-    await request(app)
-      .post("/medicines")
-      .send({
-        name: "Expired",
-        stock: 10,
-        threshold: 5,
-        expirationDate: dateInDays(-10),
-      });
+  return response.body;
+};
 
-    await request(app)
-      .post("/medicines")
-      .send({
-        name: "Expiring soon and Low stock",
-        stock: 2,
-        threshold: 5,
-        expirationDate: dateInDays(10),
-      });
+const createBatch = async (
+  medicineProductId: string,
+  quantity: number,
+  expirationDate: string,
+) => {
+  return request(app)
+    .post(`/medicines/products/${medicineProductId}/batches`)
+    .send({
+      quantity,
+      expirationDate,
+    });
+};
 
-    const response = await request(app).get("/medicines/alerts");
+describe("GET /medicines/inventory/alerts", () => {
+  it("should return correct inventory alerts for products and batches", async () => {
+    const outOfStock = await createProduct("Out of stock", 5);
+
+    const lowStock = await createProduct("Low stock", 10);
+    await createBatch(lowStock.id, 5, futureDate(60));
+
+    const expiringSoon = await createProduct("Expiring soon", 5);
+    await createBatch(expiringSoon.id, 20, futureDate(10));
+
+    const expired = await createProduct("Expired", 5);
+    await createBatch(expired.id, 20, pastDate(10));
+
+    const lowStockAndExpiringSoon = await createProduct(
+      "Low stock and expiring soon",
+      20,
+    );
+    await createBatch(lowStockAndExpiringSoon.id, 5, futureDate(10));
+
+    const response = await request(app).get("/medicines/inventory/alerts");
 
     expect(response.status).toBe(200);
 
-    expect(response.body).toEqual([
-      expect.objectContaining({
-        name: "Out of stock",
-        alerts: ["OUT_OF_STOCK"],
-      }),
-      expect.objectContaining({ name: "Low stock", alerts: ["LOW_STOCK"] }),
-      expect.objectContaining({
-        name: "Expiring soon",
-        alerts: ["EXPIRING_SOON"],
-      }),
-      expect.objectContaining({
-        name: "Expired",
-        alerts: ["EXPIRED"],
-      }),
-      expect.objectContaining({
-        name: "Expiring soon and Low stock",
-        alerts: expect.arrayContaining(["LOW_STOCK", "EXPIRING_SOON"]),
-      }),
-    ]);
+    expect(response.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: outOfStock.id,
+          name: "out of stock",
+          totalQuantity: 0,
+          alerts: ["OUT_OF_STOCK"],
+        }),
+        expect.objectContaining({
+          id: lowStock.id,
+          name: "low stock",
+          totalQuantity: 5,
+          alerts: ["LOW_STOCK"],
+        }),
+        expect.objectContaining({
+          id: expiringSoon.id,
+          name: "expiring soon",
+          totalQuantity: 20,
+          alerts: ["EXPIRING_SOON"],
+        }),
+        expect.objectContaining({
+          id: expired.id,
+          name: "expired",
+          totalQuantity: 20,
+          alerts: ["EXPIRED"],
+        }),
+        expect.objectContaining({
+          id: lowStockAndExpiringSoon.id,
+          name: "low stock and expiring soon",
+          totalQuantity: 5,
+          alerts: expect.arrayContaining(["LOW_STOCK", "EXPIRING_SOON"]),
+        }),
+      ]),
+    );
+  });
+
+  it("should return batch-level alerts inside inventory items", async () => {
+    const product = await createProduct("Doliprane", 10);
+
+    await createBatch(product.id, 5, pastDate(3));
+    await createBatch(product.id, 20, futureDate(5));
+
+    const response = await request(app).get("/medicines/inventory/alerts");
+
+    expect(response.status).toBe(200);
+
+    const item = response.body.find(
+      (inventoryItem: { id: string }) => inventoryItem.id === product.id,
+    );
+
+    expect(item).toBeDefined();
+    expect(item.batches).toHaveLength(2);
+
+    expect(item.batches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          alerts: ["EXPIRED"],
+        }),
+        expect.objectContaining({
+          alerts: ["EXPIRING_SOON"],
+        }),
+      ]),
+    );
+
+    expect(item.alerts).toEqual(
+      expect.arrayContaining(["EXPIRED", "EXPIRING_SOON"]),
+    );
   });
 });

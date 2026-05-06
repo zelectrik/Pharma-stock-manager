@@ -1,15 +1,23 @@
 import { Router } from "express";
 import {
-  createMedicineHandler,
-  getMedicinesHandler,
-  getMedicineAlertsHandler,
+  createMedicineProductHandler,
+  createMedicineBatchHandler,
+  getMedicineProductsHandler,
+  getInventoryHandler,
+  getInventoryWithAlertsHandler,
 } from "../controllers/medicine.controller";
 
 const router = Router();
 
-router.get("/alerts", getMedicineAlertsHandler);
-router.get("/", getMedicinesHandler);
+//products
+router.get("/products", getMedicineProductsHandler);
+router.post("/products", createMedicineProductHandler);
 
-router.post("/", createMedicineHandler);
+// batches
+router.post("/products/:medicineProductId/batches", createMedicineBatchHandler);
+
+// inventory
+router.get("/inventory/alerts", getInventoryWithAlertsHandler);
+router.get("/inventory", getInventoryHandler);
 
 export default router;
