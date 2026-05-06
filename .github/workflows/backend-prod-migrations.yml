@@ -30,7 +30,8 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
         run: npx prisma generate
 
-      - name: Show migration status
+      - name: Show migration status before deploy
+        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
         run: npx prisma migrate status
@@ -39,3 +40,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
         run: npx prisma migrate deploy
+
+      - name: Show migration status after deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+        run: npx prisma migrate status
