@@ -1,66 +1,35 @@
-import type {
-  InventoryItem,
-  InventoryItemWithAlerts,
-  MedicineBatch,
-  MedicineProduct,
-} from "../types/medicine";
+import type { Medicine, MedicineAlert } from "../types/medicine";
 
 const API_URL = "/api";
 
-export const getMedicineProducts = async (): Promise<MedicineProduct[]> => {
-  const res = await fetch(`${API_URL}/medicines/products`);
-  if (!res.ok) throw new Error("Failed to fetch medicine products");
+export const getMedicines = async (): Promise<Medicine[]> => {
+  const res = await fetch(`${API_URL}/medicines`);
+  if (!res.ok) {
+    throw new Error("Failed to fetch medicines");
+  }
   return res.json();
 };
 
-export const createMedicineProduct = async (data: {
-  name: string;
-  threshold: number;
-}): Promise<MedicineProduct> => {
-  const res = await fetch(`${API_URL}/medicines/products`, {
+export const getAlerts = async (): Promise<MedicineAlert[]> => {
+  const res = await fetch(`${API_URL}/medicines/alerts`);
+  if (!res.ok) {
+    throw new Error("Failed to fetch alerts");
+  }
+  return res.json();
+};
+
+export const createMedicine = async (
+  data: Omit<Medicine, "id" | "createdAt" | "updatedAt">,
+) => {
+  const res = await fetch(`${API_URL}/medicines`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(data),
   });
-
-  if (!res.ok) throw new Error("Failed to create medicine product");
-  return res.json();
-};
-
-export const createMedicineBatch = async (
-  medicineProductId: string,
-  data: {
-    quantity: number;
-    expirationDate: string;
-  },
-): Promise<MedicineBatch> => {
-  const res = await fetch(
-    `${API_URL}/medicines/products/${medicineProductId}/batches`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    },
-  );
-
-  if (!res.ok) throw new Error("Failed to create medicine batch");
-  return res.json();
-};
-
-export const getInventory = async (): Promise<InventoryItem[]> => {
-  const res = await fetch(`${API_URL}/medicines/inventory`);
-  if (!res.ok) throw new Error("Failed to fetch inventory");
-  return res.json();
-};
-
-export const getInventoryWithAlerts = async (): Promise<
-  InventoryItemWithAlerts[]
-> => {
-  const res = await fetch(`${API_URL}/medicines/inventory/alerts`);
-  if (!res.ok) throw new Error("Failed to fetch inventory alerts");
+  if (!res.ok) {
+    throw new Error("Failed to create medicine");
+  }
   return res.json();
 };

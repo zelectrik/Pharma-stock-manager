@@ -1,40 +1,32 @@
 import { useEffect, useState } from "react";
-import {
-  getInventoryWithAlerts,
-  getMedicineProducts,
-} from "./api/medicinesApi";
-import type {
-  InventoryItemWithAlerts,
-  MedicineProduct,
-} from "./types/medicine";
-import ProductForm from "./components/ProductForm";
-import BatchForm from "./components/BatchForm";
-import InventoryTable from "./components/InventoryTable";
+import { getMedicines, getAlerts } from "./api/medicinesApi";
+import type { Medicine, MedicineAlert } from "./types/medicine";
+import MedicineForm from "./components/MedicineForm";
 import "./App.css";
 
-type ActiveTab = "inventory" | "alerts" | "product" | "batch";
-
 function App() {
-  const [products, setProducts] = useState<MedicineProduct[]>([]);
-  const [inventory, setInventory] = useState<InventoryItemWithAlerts[]>([]);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("inventory");
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [alerts, setAlerts] = useState<MedicineAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const inventoryWithAlertsOnly = inventory.filter(
-    (item) => item.alerts.length > 0,
-  );
-
-  const refreshDashboard = async () => {
+  const refresh = async () => {
+    setLoading(true);
     setError(null);
 
-    const [productsData, inventoryData] = await Promise.all([
-      getMedicineProducts(),
-      getInventoryWithAlerts(),
-    ]);
+    try {
+      const [medicinesData, alertsData] = await Promise.all([
+        getMedicines(),
+        getAlerts(),
+      ]);
 
-    setProducts(productsData);
-    setInventory(inventoryData);
+      setMedicines(medicinesData);
+      setAlerts(alertsData);
+    } catch {
+      setError("Unable to refresh data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -43,7 +35,13 @@ function App() {
       setError(null);
 
       try {
-        await refreshDashboard();
+        const [medicinesData, alertsData] = await Promise.all([
+          getMedicines(),
+          getAlerts(),
+        ]);
+
+        setMedicines(medicinesData);
+        setAlerts(alertsData);
       } catch {
         setError("Unable to load dashboard data");
       } finally {
@@ -54,6 +52,18 @@ function App() {
     loadInitialData();
   }, []);
 
+  const totalMedicines = medicines.length;
+  const totalStock = medicines.reduce(
+    (sum, medicine) => sum + medicine.stock,
+    0,
+  );
+  const lowStockCount = medicines.filter((m) => m.stock < m.threshold).length;
+
+  const getMedicineAlerts = (medicineId: string) => {
+    const alert = alerts.find((a) => a.id === medicineId);
+    return alert ? alert.alerts : [];
+  };
+
   return (
     <main className="app">
       <section className="hero">
@@ -61,93 +71,89 @@ function App() {
           <p className="eyebrow">Pharmacy inventory dashboard</p>
           <h1>Pharma Stock Manager</h1>
           <p className="subtitle">
-            Manage medicine products, stock batches, expiration dates and
-            inventory alerts.
+            Monitor medicine inventory, stock thresholds and expiration risks.
           </p>
         </div>
       </section>
 
-      <nav className="tabs">
-        <button
-          className={activeTab === "inventory" ? "active" : ""}
-          onClick={() => setActiveTab("inventory")}
-        >
-          Inventory
-        </button>
+      <section className="stats-grid">
+        <article className="stat-card">
+          <span>Total medicines</span>
+          <strong>{totalMedicines}</strong>
+        </article>
 
-        <button
-          className={activeTab === "alerts" ? "active" : ""}
-          onClick={() => setActiveTab("alerts")}
-        >
-          Alerts
-        </button>
+        <article className="stat-card">
+          <span>Total stock</span>
+          <strong>{totalStock}</strong>
+        </article>
 
-        <button
-          className={activeTab === "product" ? "active" : ""}
-          onClick={() => setActiveTab("product")}
-        >
-          Add product
-        </button>
+        <article className="stat-card warning">
+          <span>Low stock</span>
+          <strong>{lowStockCount}</strong>
+        </article>
+      </section>
 
-        <button
-          className={activeTab === "batch" ? "active" : ""}
-          onClick={() => setActiveTab("batch")}
-        >
-          Add batch
-        </button>
-      </nav>
+      <section className="panel">
+        <MedicineForm onCreated={refresh} />
+      </section>
 
-      {activeTab === "inventory" && (
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <h2>Inventory</h2>
-              <p>
-                All medicine products with aggregated quantities and batch
-                details.
-              </p>
-            </div>
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <h2>Medicines</h2>
+            <p>Current stock overview</p>
           </div>
+        </div>
 
-          {loading && <p className="state">Loading inventory...</p>}
-          {error && <p className="state error">{error}</p>}
+        {loading && <p className="state">Loading medicines...</p>}
+        {error && <p className="state error">{error}</p>}
 
-          {!loading && !error && <InventoryTable inventory={inventory} />}
-        </section>
-      )}
+        {!loading && !error && (
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Stock</th>
+                  <th>Expiration</th>
+                  <th>Alerts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {medicines.map((medicine) => {
+                  const medicineAlerts = getMedicineAlerts(medicine.id);
 
-      {activeTab === "alerts" && (
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <h2>Products with alerts</h2>
-              <p>
-                Medicine products requiring attention due to stock or expiration
-                risks.
-              </p>
-            </div>
+                  return (
+                    <tr key={medicine.id}>
+                      <td>{medicine.name}</td>
+                      <td>{medicine.stock}</td>
+                      <td>
+                        {new Date(medicine.expirationDate).toLocaleDateString()}
+                      </td>
+                      <td>
+                        <div className="badges">
+                          {medicineAlerts.length === 0 ? (
+                            <span className="badge success">OK</span>
+                          ) : (
+                            medicineAlerts.map((alert) => (
+                              <span
+                                key={alert}
+                                className={`badge ${alert.toLowerCase()}`}
+                              >
+                                {alert.replaceAll("_", " ")}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-
-          {loading && <p className="state">Loading alerts...</p>}
-          {error && <p className="state error">{error}</p>}
-
-          {!loading && !error && (
-            <InventoryTable inventory={inventoryWithAlertsOnly} />
-          )}
-        </section>
-      )}
-
-      {activeTab === "product" && (
-        <section className="single-form-panel">
-          <ProductForm onCreated={refreshDashboard} />
-        </section>
-      )}
-
-      {activeTab === "batch" && (
-        <section className="single-form-panel">
-          <BatchForm products={products} onCreated={refreshDashboard} />
-        </section>
-      )}
+        )}
+      </section>
     </main>
   );
 }
