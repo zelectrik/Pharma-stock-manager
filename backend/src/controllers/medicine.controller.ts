@@ -1,19 +1,19 @@
 import { Request, Response } from "express";
-import { createMedicineProductSchema } from "../schemas/medicineProduct.schema";
+import { createPharmacyMedicineSchema } from "../schemas/pharmacyMedicine.schema";
 import { createMedicineBatchSchema } from "../schemas/medicineBatch.schema";
 import {
-  createMedicineProduct,
+  createPharmacyMedicine,
   createMedicineBatch,
-  getMedicineProducts,
+  getPharmacyMedicines,
   getInventory,
   getInventoryWithAlerts,
 } from "../services/medicine.service";
 
-export const createMedicineProductHandler = async (
+export const createPharmacyMedicineHandler = async (
   req: Request,
   res: Response,
 ) => {
-  const parsed = createMedicineProductSchema.safeParse(req.body);
+  const parsed = createPharmacyMedicineSchema.safeParse(req.body);
 
   if (!parsed.success) {
     return res.status(400).json({
@@ -22,11 +22,14 @@ export const createMedicineProductHandler = async (
   }
 
   try {
-    const medicineProduct = await createMedicineProduct(parsed.data);
+    const medicineProduct = await createPharmacyMedicine(parsed.data);
 
     return res.status(201).json(medicineProduct);
   } catch (error) {
-    if (error instanceof Error && error.cause === "DUPLICATE_NAME") {
+    if (
+      error instanceof Error &&
+      error.cause === "DUPLICATE_PHARMACY_MEDICINE"
+    ) {
       return res.status(409).json({
         error: error.message,
       });
@@ -44,11 +47,11 @@ export const createMedicineBatchHandler = async (
   req: Request,
   res: Response,
 ) => {
-  const { medicineProductId } = req.params;
+  const { pharmacyMedicineId } = req.params;
 
-  if (typeof medicineProductId !== "string") {
+  if (typeof pharmacyMedicineId !== "string") {
     return res.status(400).json({
-      error: "Invalid medicine product id",
+      error: "Invalid pharmacy medicine id",
     });
   }
 
@@ -63,11 +66,14 @@ export const createMedicineBatchHandler = async (
   try {
     const medicineBatch = await createMedicineBatch({
       ...parsed.data,
-      medicineProductId,
+      pharmacyMedicineId,
     });
     return res.status(201).json(medicineBatch);
   } catch (error) {
-    if (error instanceof Error && error.cause === "PRODUCT_NOT_FOUND") {
+    if (
+      error instanceof Error &&
+      error.cause === "PHARMACY_MEDICINE_NOT_FOUND"
+    ) {
       return res.status(404).json({
         error: error.message,
       });
@@ -81,11 +87,11 @@ export const createMedicineBatchHandler = async (
   }
 };
 
-export const getMedicineProductsHandler = async (
+export const getPharmacyMedicinesHandler = async (
   _req: Request,
   res: Response,
 ) => {
-  const medicines = await getMedicineProducts();
+  const medicines = await getPharmacyMedicines();
   return res.status(200).json(medicines);
 };
 
