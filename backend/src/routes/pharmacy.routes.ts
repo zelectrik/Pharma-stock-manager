@@ -9,13 +9,13 @@ import {
 
 const router = Router();
 
-//products
-router.get("/products", getPharmacyMedicinesHandler);
-router.post("/products", createPharmacyMedicineHandler);
+//medicines
+router.get("/medicines", getPharmacyMedicinesHandler);
+router.post("/medicines", createPharmacyMedicineHandler);
 
 // batches
 router.post(
-  "/products/:pharmacyMedicineId/batches",
+  "/medicines/:pharmacyMedicineId/batches",
   createMedicineBatchHandler,
 );
 

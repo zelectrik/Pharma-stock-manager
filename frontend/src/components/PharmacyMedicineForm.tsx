@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { createMedicineProduct } from "../api/medicinesApi";
+import { createPharmacyMedicine } from "../api/medicinesApi";
 
 type Props = {
   onCreated: () => Promise<void> | void;
 };
 
-export default function ProductForm({ onCreated }: Props) {
+export default function PharmacyMedicineForm({ onCreated }: Props) {
   const [name, setName] = useState("");
   const [threshold, setThreshold] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ export default function ProductForm({ onCreated }: Props) {
     setSuccess(null);
 
     try {
-      await createMedicineProduct({
+      await createPharmacyMedicine({
         name,
         threshold,
       });
@@ -40,7 +40,7 @@ export default function ProductForm({ onCreated }: Props) {
     <form className="form-card" onSubmit={handleSubmit}>
       <div className="form-header">
         <div>
-          <h3>Add medicine product</h3>
+          <h3>Add pharmacy medicine</h3>
           <p>Create a medicine reference with its alert threshold.</p>
         </div>
       </div>
