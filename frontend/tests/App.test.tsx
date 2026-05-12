@@ -11,9 +11,10 @@ const mockedApi = vi.mocked(medicinesApi);
 
 describe("App", () => {
   beforeEach(() => {
-    mockedApi.getMedicineProducts.mockResolvedValue([
+    mockedApi.getPharmacyMedicines.mockResolvedValue([
       {
         id: "product-1",
+        medicineProductId: "medicine-product-1",
         name: "doliprane",
         threshold: 10,
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -21,9 +22,10 @@ describe("App", () => {
       },
     ]);
 
-    mockedApi.getInventoryWithAlerts.mockResolvedValue([
+    mockedApi.getPharmacyInventoryWithAlerts.mockResolvedValue([
       {
         id: "product-1",
+        medicineProductId: "medicine-product-1",
         name: "doliprane",
         threshold: 10,
         totalQuantity: 5,
@@ -34,8 +36,9 @@ describe("App", () => {
       },
     ]);
 
-    mockedApi.createMedicineProduct.mockResolvedValue({
+    mockedApi.createPharmacyMedicine.mockResolvedValue({
       id: "product-2",
+      medicineProductId: "medicine-product-2",
       name: "ibuprofene",
       threshold: 5,
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -44,7 +47,7 @@ describe("App", () => {
 
     mockedApi.createMedicineBatch.mockResolvedValue({
       id: "batch-1",
-      medicineProductId: "product-1",
+      pharmacyMedicineId: "product-1",
       quantity: 10,
       expirationDate: "2026-06-30T00:00:00.000Z",
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -90,7 +93,7 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "Add product" }));
 
-    expect(screen.getByText("Add medicine product")).toBeInTheDocument();
+    expect(screen.getByText("Add pharmacy medicine")).toBeInTheDocument();
     expect(screen.getByLabelText("Medicine name")).toBeInTheDocument();
   });
 
@@ -100,7 +103,7 @@ describe("App", () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(mockedApi.getMedicineProducts).toHaveBeenCalled();
+      expect(mockedApi.getPharmacyMedicines).toHaveBeenCalled();
     });
 
     await user.click(screen.getByRole("button", { name: "Add batch" }));

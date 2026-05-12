@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import {
-  getInventoryWithAlerts,
-  getMedicineProducts,
+  getPharmacyInventoryWithAlerts,
+  getPharmacyMedicines,
 } from "./api/medicinesApi";
 import type {
   InventoryItemWithAlerts,
-  MedicineProduct,
+  PharmacyMedicine,
 } from "./types/medicine";
-import ProductForm from "./components/ProductForm";
+import PharmacyMedicineForm from "./components/PharmacyMedicineForm";
 import BatchForm from "./components/BatchForm";
 import InventoryTable from "./components/InventoryTable";
 import "./App.css";
@@ -15,7 +15,7 @@ import "./App.css";
 type ActiveTab = "inventory" | "alerts" | "product" | "batch";
 
 function App() {
-  const [products, setProducts] = useState<MedicineProduct[]>([]);
+  const [products, setProducts] = useState<PharmacyMedicine[]>([]);
   const [inventory, setInventory] = useState<InventoryItemWithAlerts[]>([]);
   const [activeTab, setActiveTab] = useState<ActiveTab>("inventory");
   const [loading, setLoading] = useState(true);
@@ -29,8 +29,8 @@ function App() {
     setError(null);
 
     const [productsData, inventoryData] = await Promise.all([
-      getMedicineProducts(),
-      getInventoryWithAlerts(),
+      getPharmacyMedicines(),
+      getPharmacyInventoryWithAlerts(),
     ]);
 
     setProducts(productsData);
@@ -139,7 +139,7 @@ function App() {
 
       {activeTab === "product" && (
         <section className="single-form-panel">
-          <ProductForm onCreated={refreshDashboard} />
+          <PharmacyMedicineForm onCreated={refreshDashboard} />
         </section>
       )}
 

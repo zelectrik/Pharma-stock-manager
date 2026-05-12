@@ -1,5 +1,6 @@
-export type MedicineProduct = {
+export type PharmacyMedicine = {
   id: string;
+  medicineProductId: string;
   name: string;
   threshold: number;
   createdAt: string;
@@ -8,7 +9,7 @@ export type MedicineProduct = {
 
 export type MedicineBatch = {
   id: string;
-  medicineProductId: string;
+  pharmacyMedicineId: string;
   quantity: number;
   expirationDate: string;
   createdAt: string;
@@ -21,17 +22,17 @@ export type MedicineAlert =
   | "EXPIRING_SOON"
   | "EXPIRED";
 
-export type MedicineBacthWithAlerts = MedicineBatch & {
+export type MedicineBatchWithAlerts = MedicineBatch & {
   alerts: MedicineAlert[];
 };
 
-export type InventoryItem = MedicineProduct & {
+export type InventoryItem = PharmacyMedicine & {
   totalQuantity: number;
   batches: MedicineBatch[];
 };
 
-export type InventoryItemWithAlerts = MedicineProduct & {
+export type InventoryItemWithAlerts = PharmacyMedicine & {
   totalQuantity: number;
   alerts: MedicineAlert[];
-  batches: MedicineBacthWithAlerts[];
+  batches: MedicineBatchWithAlerts[];
 };

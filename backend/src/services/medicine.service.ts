@@ -7,34 +7,74 @@ export type MedicineAlert =
   | "EXPIRING_SOON"
   | "EXPIRED";
 
-type CreateMedicineProductInput = {
+type CreatePharmacyMedicineInput = {
   name: string;
   threshold: number;
 };
 
 type CreateMedicineBatchInput = {
-  medicineProductId: string;
+  pharmacyMedicineId: string;
   quantity: number;
   expirationDate: string;
 };
 
-export const createMedicineProduct = async (
-  data: CreateMedicineProductInput,
+const getDefaultPharmacy = async () => {
+  return prisma.pharmacy.upsert({
+    where: { email: "default@pharma-stock.local" },
+    update: {},
+    create: {
+      name: "Default Pharmacy",
+      email: "default@pharma-stock.local",
+      address: "1 demo street",
+      city: "Annecy",
+      zipCode: "74000",
+      country: "France",
+    },
+  });
+};
+
+export const createPharmacyMedicine = async (
+  data: CreatePharmacyMedicineInput,
 ) => {
+  const pharmacy = await getDefaultPharmacy();
+  const formattedName = data.name.trim().toLowerCase();
+  const medicineProduct = await prisma.medicineProduct.upsert({
+    where: {
+      name: formattedName,
+    },
+    update: {},
+    create: {
+      name: formattedName,
+    },
+  });
+
   try {
-    return await prisma.medicineProduct.create({
+    const pharmacyMedicine = await prisma.pharmacyMedicine.create({
       data: {
-        name: data.name.trim().toLowerCase(),
         threshold: data.threshold,
+        pharmacyId: pharmacy.id,
+        medicineProductId: medicineProduct.id,
+      },
+      include: {
+        medicineProduct: true,
       },
     });
+
+    return {
+      id: pharmacyMedicine.id,
+      medicineProductId: pharmacyMedicine.medicineProductId,
+      name: pharmacyMedicine.medicineProduct.name,
+      threshold: pharmacyMedicine.threshold,
+      createdAt: pharmacyMedicine.createdAt,
+      updatedAt: pharmacyMedicine.updatedAt,
+    };
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      throw new Error("Medicine type name already exists", {
-        cause: "DUPLICATE_NAME",
+      throw new Error("Medicine already tracked by this pharmacy", {
+        cause: "DUPLICATE_PHARMACY_MEDICINE",
       });
     }
     throw error;
@@ -45,7 +85,7 @@ export const createMedicineBatch = async (data: CreateMedicineBatchInput) => {
   try {
     return await prisma.medicineBatch.create({
       data: {
-        medicineProductId: data.medicineProductId,
+        pharmacyMedicineId: data.pharmacyMedicineId,
         quantity: data.quantity,
         expirationDate: new Date(data.expirationDate),
       },
@@ -55,8 +95,8 @@ export const createMedicineBatch = async (data: CreateMedicineBatchInput) => {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2003"
     ) {
-      throw new Error("Medicine product not found", {
-        cause: "PRODUCT_NOT_FOUND",
+      throw new Error("Pharmacy medicine not found", {
+        cause: "PHARMACY_MEDICINE_NOT_FOUND",
       });
     }
 
@@ -64,18 +104,37 @@ export const createMedicineBatch = async (data: CreateMedicineBatchInput) => {
   }
 };
 
-export const getMedicineProducts = async () => {
-  return prisma.medicineProduct.findMany({
+export const getPharmacyMedicines = async () => {
+  const pharmacy = await getDefaultPharmacy();
+  const pharmacyMedicines = await prisma.pharmacyMedicine.findMany({
+    where: { pharmacyId: pharmacy.id },
+    include: {
+      medicineProduct: true,
+    },
     orderBy: {
-      name: "asc",
+      medicineProduct: {
+        name: "asc",
+      },
     },
   });
+  return pharmacyMedicines.map((pharmacyMedicine) => ({
+    id: pharmacyMedicine.id,
+    medicineProductId: pharmacyMedicine.medicineProductId,
+    name: pharmacyMedicine.medicineProduct.name,
+    threshold: pharmacyMedicine.threshold,
+    createdAt: pharmacyMedicine.createdAt,
+    updatedAt: pharmacyMedicine.updatedAt,
+  }));
 };
 
 export const getInventory = async () => {
-  const products = await prisma.medicineProduct.findMany({
+  const pharmacy = await getDefaultPharmacy();
+  const pharmacyMedicines = await prisma.pharmacyMedicine.findMany({
+    where: { pharmacyId: pharmacy.id },
     orderBy: {
-      name: "asc",
+      medicineProduct: {
+        name: "asc",
+      },
     },
     include: {
       batches: {
@@ -83,18 +142,25 @@ export const getInventory = async () => {
           expirationDate: "asc",
         },
       },
+      medicineProduct: true,
     },
   });
 
-  return products.map((product) => {
-    const totalQuantity = product.batches.reduce(
-      (acc, b) => acc + b.quantity,
+  return pharmacyMedicines.map((pharmacyMedicine) => {
+    const totalQuantity = pharmacyMedicine.batches.reduce(
+      (sum, batch) => sum + batch.quantity,
       0,
     );
 
     return {
-      ...product,
-      totalQuantity: totalQuantity,
+      id: pharmacyMedicine.id,
+      medicineProductId: pharmacyMedicine.medicineProductId,
+      name: pharmacyMedicine.medicineProduct.name,
+      threshold: pharmacyMedicine.threshold,
+      totalQuantity,
+      batches: pharmacyMedicine.batches,
+      createdAt: pharmacyMedicine.createdAt,
+      updatedAt: pharmacyMedicine.updatedAt,
     };
   });
 };

@@ -9,7 +9,7 @@ const pastDate = (days: number) =>
   new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
 const createProduct = async (name: string, threshold: number) => {
-  const response = await request(app).post("/medicines/products").send({
+  const response = await request(app).post("/pharmacy/medicines").send({
     name,
     threshold,
   });
@@ -25,14 +25,14 @@ const createBatch = async (
   expirationDate: string,
 ) => {
   return request(app)
-    .post(`/medicines/products/${medicineProductId}/batches`)
+    .post(`/pharmacy/medicines/${medicineProductId}/batches`)
     .send({
       quantity,
       expirationDate,
     });
 };
 
-describe("GET /medicines/inventory/alerts", () => {
+describe("GET /pharmacy/inventory/alerts", () => {
   it("should return correct inventory alerts for products and batches", async () => {
     const outOfStock = await createProduct("Out of stock", 5);
 
@@ -51,7 +51,7 @@ describe("GET /medicines/inventory/alerts", () => {
     );
     await createBatch(lowStockAndExpiringSoon.id, 5, futureDate(10));
 
-    const response = await request(app).get("/medicines/inventory/alerts");
+    const response = await request(app).get("/pharmacy/inventory/alerts");
 
     expect(response.status).toBe(200);
 
@@ -97,7 +97,7 @@ describe("GET /medicines/inventory/alerts", () => {
     await createBatch(product.id, 5, pastDate(3));
     await createBatch(product.id, 20, futureDate(5));
 
-    const response = await request(app).get("/medicines/inventory/alerts");
+    const response = await request(app).get("/pharmacy/inventory/alerts");
 
     expect(response.status).toBe(200);
 
