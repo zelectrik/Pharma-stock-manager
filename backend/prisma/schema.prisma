@@ -6,14 +6,35 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  SUPER_ADMIN
+  PHARMACY_ADMIN
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  pharmacyId   String?
+
+  pharmacy Pharmacy? @relation(fields: [pharmacyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pharmacyId])
+}
+
 model Pharmacy {
-  id        String   @id @default(uuid())
-  name      String
-  email     String?  @unique
-  address   String
-  city      String
-  zipCode   String
-  country   String   @default("France")
+  id      String  @id @default(uuid())
+  name    String
+  email   String? @unique
+  address String
+  city    String
+  zipCode String
+  country String  @default("France")
+  users   User[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -22,27 +43,28 @@ model Pharmacy {
 }
 
 model MedicineProduct {
-  id        String   @id @default(uuid())
-  name      String   @unique
+  id   String @id @default(uuid())
+  name String @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   pharmacyMedicines PharmacyMedicine[]
 }
 
 model PharmacyMedicine {
-  id                String   @id @default(uuid())
-  pharmacyId         String
-  medicineProductId  String
-  threshold          Int
+  id                String @id @default(uuid())
+  pharmacyId        String
+  medicineProductId String
+  threshold         Int
 
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   pharmacy        Pharmacy        @relation(fields: [pharmacyId], references: [id])
   medicineProduct MedicineProduct @relation(fields: [medicineProductId], references: [id])
   batches         MedicineBatch[]
+
   @@unique([pharmacyId, medicineProductId])
 }
 
@@ -52,8 +74,8 @@ model MedicineBatch {
   quantity           Int
   expirationDate     DateTime
 
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   pharmacyMedicine PharmacyMedicine @relation(fields: [pharmacyMedicineId], references: [id])
 }
