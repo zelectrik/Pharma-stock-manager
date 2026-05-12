@@ -34,6 +34,8 @@ This project is inspired by real pharmacy inventory challenges:
 - Prisma ORM
 - PostgreSQL (Supabase)
 - Zod
+- JWT authentication
+- bcrypt password hashing
 
 **Frontend**
 
@@ -228,6 +230,71 @@ This makes the current architecture ready for role-based access without blocking
 
 ---
 
+## 🔐 Authentication Foundation
+
+The backend now includes an authentication foundation designed for future multi-role access control.
+
+Authentication is based on:
+
+- JWT tokens
+- hashed passwords with bcrypt
+- role-based users
+- protected authenticated routes
+- manual super admin creation
+
+Current user roles:
+
+```txt
+SUPER_ADMIN
+PHARMACY_ADMIN
+```
+
+### SUPER_ADMIN
+
+A `SUPER_ADMIN` is not linked to a pharmacy.
+
+This role is intended to manage global administration features later, such as:
+
+- viewing all pharmacies
+- creating pharmacies
+- creating pharmacy admins
+- accessing global platform metrics
+
+Super admins are not created through a public API.
+
+They are created manually with:
+
+```bash
+cd backend
+npm run create:super-admin
+```
+
+Required environment variables:
+
+```env
+SUPER_ADMIN_EMAIL=admin@example.com
+SUPER_ADMIN_PASSWORD=your_secure_password
+```
+
+### PHARMACY_ADMIN
+
+A `PHARMACY_ADMIN` is linked to a pharmacy through `pharmacyId`.
+
+This role is intended to manage only one pharmacy inventory later.
+
+Future behavior:
+
+```txt
+PHARMACY_ADMIN
+→ authenticated user
+→ req.user.pharmacyId
+→ inventory scoped to this pharmacy
+```
+
+For now, pharmacy inventory routes still use the temporary default pharmacy until frontend login and route protection are implemented.
+
+---
+
 ## ✨ API
 
 ### Health
@@ -243,6 +310,77 @@ Response:
   "status": "ok"
 }
 ```
+
+---
+
+### Login
+
+```http
+POST /auth/login
+```
+
+Authenticates a user and returns a JWT token.
+
+Body:
+
+```json
+{
+  "email": "admin@example.com",
+  "password": "password123"
+}
+```
+
+Response:
+
+```json
+{
+  "token": "jwtToken",
+  "user": {
+    "id": "userUuid",
+    "email": "admin@example.com",
+    "role": "SUPER_ADMIN",
+    "pharmacyId": null
+  }
+}
+```
+
+Notes:
+
+- Email is normalized before login.
+- Passwords are compared against bcrypt hashes.
+- The response never exposes `passwordHash`.
+- Invalid credentials return `401 Unauthorized`.
+
+---
+
+### Get authenticated user
+
+```http
+GET /auth/me
+```
+
+Requires:
+
+```http
+Authorization: Bearer <token>
+```
+
+Response:
+
+```json
+{
+  "id": "userUuid",
+  "email": "admin@example.com",
+  "role": "SUPER_ADMIN",
+  "pharmacyId": null
+}
+```
+
+Notes:
+
+- Missing tokens return `401 Unauthorized`.
+- Invalid tokens return `401 Unauthorized`.
+- This route is protected by the authentication middleware.
 
 ---
 
@@ -507,6 +645,8 @@ Prisma --> DB[(PostgreSQL)]
 
 Controller --> Validation[Zod]
 
+Service --> Auth[JWT Auth]
+Service --> PasswordHashing[bcrypt]
 Service --> Pharmacy[Default Pharmacy Scope]
 Service --> Inventory[Inventory Aggregation]
 Service --> Alerts[Business Alerts]
@@ -534,6 +674,14 @@ Service --> Alerts[Business Alerts]
 - Create stock batches
 - Compute aggregated pharmacy inventory
 - Compute pharmacy-medicine-level and batch-level alerts
+
+**Authentication**
+
+- Validates login credentials
+- Hashes and compares passwords with bcrypt
+- Issues JWT tokens
+- Protects authenticated routes with middleware
+- Supports role-based access with `SUPER_ADMIN` and `PHARMACY_ADMIN`
 
 **Prisma**
 
@@ -583,6 +731,13 @@ Covered backend scenarios:
 - Pharmacy-specific threshold checks
 - Pharmacy-medicine-level alerts
 - Batch-level alerts
+- User login with valid credentials
+- Invalid login credentials
+- Email normalization during login
+- Authenticated `/auth/me` access
+- Missing token handling
+- Invalid token handling
+- Ensuring `passwordHash` is never exposed
 
 ### Frontend component tests
 
@@ -712,6 +867,17 @@ npm install
 npm run dev
 ```
 
+### Create local super admin
+
+```bash
+cd backend
+npm run create:super-admin
+```
+
+This script creates a `SUPER_ADMIN` user from environment variables.
+
+Super admins are created manually on purpose and are not exposed through a public registration endpoint.
+
 ---
 
 ## 🔐 Environment Variables
@@ -720,14 +886,29 @@ Backend `.env`:
 
 ```env
 DATABASE_URL=your_database_url
+JWT_SECRET=your_jwt_secret
+
+SUPER_ADMIN_EMAIL=admin@example.com
+SUPER_ADMIN_PASSWORD=your_secure_password
 ```
 
-For local integration tests, `.env.test` points to the Docker PostgreSQL database.
+For local integration tests, `.env.test` points to the Docker PostgreSQL database and must include:
+
+```env
+DATABASE_URL=your_test_database_url
+JWT_SECRET=test_secret
+```
 
 GitHub Actions production migration workflow requires:
 
 ```env
 DATABASE_URL_PROD=your_production_database_url
+```
+
+Production deployment also requires:
+
+```env
+JWT_SECRET=your_secure_production_jwt_secret
 ```
 
 ---
@@ -791,6 +972,11 @@ Use `migrate status` to inspect pending migrations.
 - Vercel preview deployments → safer release workflow
 - Manual production migrations → safer handling of schema changes
 - Branch protection → prevents accidental direct commits to `main`
+- JWT authentication → stateless authentication suitable for API usage
+- bcrypt password hashing → passwords are never stored in plain text
+- Manual super admin creation → avoids exposing privileged account creation through public endpoints
+- Role-based user model → prepares future access control for super admins and pharmacy admins
+- Auth middleware → centralizes token validation and authenticated user extraction
 
 ---
 
@@ -798,11 +984,11 @@ Use `migrate status` to inspect pending migrations.
 
 Possible improvements:
 
-- Add authentication
-- Add `User` model
-- Add role-based access control
-- Add `SUPER_ADMIN` role
-- Add `PHARMACY_ADMIN` role
+- Protect pharmacy routes with authentication
+- Replace temporary default pharmacy with authenticated `req.user.pharmacyId`
+- Add frontend login page
+- Store JWT token on the frontend
+- Add role-based frontend navigation
 - Allow super admin to create pharmacies
 - Allow pharmacy admins to manage only their own pharmacy inventory
 - Add stock usage endpoint to consume quantities from batches
@@ -833,6 +1019,9 @@ This project demonstrates:
 - Vercel deployment
 - Safe production migration workflow
 - PR-based development workflow
+- JWT authentication foundation
+- Role-based access preparation
+- Manual privileged user creation workflow
 - Production-oriented thinking
 
 ---
