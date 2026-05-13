@@ -36,6 +36,7 @@ This project is inspired by real pharmacy inventory challenges:
 - Zod
 - JWT authentication
 - bcrypt password hashing
+- Super admin management API
 
 **Frontend**
 
@@ -205,7 +206,7 @@ The inventory total quantity is computed from all batches linked to the same `Ph
 
 ## 🏥 Temporary Default Pharmacy
 
-Authentication is not implemented yet.
+Authentication is implemented, but pharmacy inventory routes are not fully scoped to authenticated users yet.
 
 To keep the application usable while preparing the future multi-pharmacy model, the backend currently uses a **default pharmacy** internally.
 
@@ -214,7 +215,7 @@ Temporary behavior:
 - New tracked medicines are linked to the default pharmacy
 - Inventory is computed for the default pharmacy
 - Alerts are computed for the default pharmacy
-- Future authentication will replace this with the logged-in user’s pharmacy
+- Future protected pharmacy routes will replace this with the logged-in user’s pharmacy
 
 Future behavior:
 
@@ -253,12 +254,13 @@ PHARMACY_ADMIN
 
 A `SUPER_ADMIN` is not linked to a pharmacy.
 
-This role is intended to manage global administration features later, such as:
+This role manages global administration features, such as:
 
 - viewing all pharmacies
 - creating pharmacies
 - creating pharmacy admins
-- accessing global platform metrics
+
+It is also intended to access global platform metrics later.
 
 Super admins are not created through a public API.
 
@@ -381,6 +383,131 @@ Notes:
 - Missing tokens return `401 Unauthorized`.
 - Invalid tokens return `401 Unauthorized`.
 - This route is protected by the authentication middleware.
+
+---
+
+### List pharmacies
+
+```http
+GET /admin/pharmacies
+```
+
+Requires a valid `SUPER_ADMIN` token.
+
+```http
+Authorization: Bearer <token>
+```
+
+Returns all pharmacies registered in the platform.
+
+Response:
+
+```json
+[
+  {
+    "id": "pharmacyUuid",
+    "name": "Pharmacie du Centre",
+    "email": "contact@pharmacie-centre.fr",
+    "address": "12 rue Carnot",
+    "city": "Annecy",
+    "zipCode": "74000",
+    "country": "France",
+    "createdAt": "...",
+    "updatedAt": "..."
+  }
+]
+```
+
+Notes:
+
+- Missing or invalid tokens return `401 Unauthorized`.
+- Non-super-admin users return `403 Forbidden`.
+
+---
+
+### Create pharmacy
+
+```http
+POST /admin/pharmacies
+```
+
+Requires a valid `SUPER_ADMIN` token.
+
+Body:
+
+```json
+{
+  "name": "Pharmacie du Centre",
+  "email": "contact@pharmacie-centre.fr",
+  "address": "12 rue Carnot",
+  "city": "Annecy",
+  "zipCode": "74000",
+  "country": "France"
+}
+```
+
+Response:
+
+```json
+{
+  "id": "pharmacyUuid",
+  "name": "Pharmacie du Centre",
+  "email": "contact@pharmacie-centre.fr",
+  "address": "12 rue Carnot",
+  "city": "Annecy",
+  "zipCode": "74000",
+  "country": "France",
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+Notes:
+
+- Payload is validated with Zod.
+- Pharmacy email is normalized before persistence.
+- Duplicate pharmacy emails return `409 Conflict`.
+
+---
+
+### Create pharmacy admin
+
+```http
+POST /admin/pharmacies/:pharmacyId/admins
+```
+
+Requires a valid `SUPER_ADMIN` token.
+
+Creates a `PHARMACY_ADMIN` user linked to a pharmacy.
+
+Body:
+
+```json
+{
+  "email": "admin.pharmacy@example.com",
+  "password": "password123"
+}
+```
+
+Response:
+
+```json
+{
+  "id": "userUuid",
+  "email": "admin.pharmacy@example.com",
+  "role": "PHARMACY_ADMIN",
+  "pharmacyId": "pharmacyUuid",
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+Notes:
+
+- The response never exposes `passwordHash`.
+- The password is hashed with bcrypt before persistence.
+- Duplicate user emails return `409 Conflict`.
+- Unknown pharmacy ids return `404 Not Found`.
 
 ---
 
@@ -596,6 +723,8 @@ The backend owns these business rules so that the frontend only displays compute
 
 The frontend displays a tab-based pharmacy inventory dashboard.
 
+The super admin management API is currently backend-only. A dedicated frontend dashboard for pharmacy and pharmacy-admin management is planned as a future step.
+
 ### Inventory tab
 
 Shows all tracked medicines for the current pharmacy.
@@ -647,6 +776,7 @@ Controller --> Validation[Zod]
 
 Service --> Auth[JWT Auth]
 Service --> PasswordHashing[bcrypt]
+Service --> Admin[Super Admin Management]
 Service --> Pharmacy[Default Pharmacy Scope]
 Service --> Inventory[Inventory Aggregation]
 Service --> Alerts[Business Alerts]
@@ -682,6 +812,14 @@ Service --> Alerts[Business Alerts]
 - Issues JWT tokens
 - Protects authenticated routes with middleware
 - Supports role-based access with `SUPER_ADMIN` and `PHARMACY_ADMIN`
+
+**Admin management**
+
+- Lists pharmacies for super admins
+- Creates pharmacies
+- Creates pharmacy admin users
+- Enforces `SUPER_ADMIN` access on admin routes
+- Converts business errors into clear HTTP responses
 
 **Prisma**
 
@@ -738,6 +876,14 @@ Covered backend scenarios:
 - Missing token handling
 - Invalid token handling
 - Ensuring `passwordHash` is never exposed
+- Super admin pharmacy listing
+- Super admin pharmacy creation
+- Pharmacy admin creation
+- Admin route `401 Unauthorized` handling
+- Admin route `403 Forbidden` handling
+- Duplicate pharmacy email handling
+- Duplicate user email handling
+- Unknown pharmacy handling
 
 ### Frontend component tests
 
@@ -977,6 +1123,8 @@ Use `migrate status` to inspect pending migrations.
 - Manual super admin creation → avoids exposing privileged account creation through public endpoints
 - Role-based user model → prepares future access control for super admins and pharmacy admins
 - Auth middleware → centralizes token validation and authenticated user extraction
+- Separate `/admin` API scope → keeps super admin operations distinct from pharmacy inventory operations
+- Super-admin-only pharmacy management → prepares a SaaS-like onboarding flow for pharmacies
 
 ---
 
@@ -989,7 +1137,7 @@ Possible improvements:
 - Add frontend login page
 - Store JWT token on the frontend
 - Add role-based frontend navigation
-- Allow super admin to create pharmacies
+- Add super admin frontend dashboard
 - Allow pharmacy admins to manage only their own pharmacy inventory
 - Add stock usage endpoint to consume quantities from batches
 - Add public medicine search
@@ -1022,6 +1170,7 @@ This project demonstrates:
 - JWT authentication foundation
 - Role-based access preparation
 - Manual privileged user creation workflow
+- Super admin pharmacy management API
 - Production-oriented thinking
 
 ---

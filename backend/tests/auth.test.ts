@@ -1,21 +1,7 @@
-import bcrypt from "bcryptjs";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { app } from "../src/app";
-import { prisma } from "../src/lib/prisma";
-
-const createSuperAdmin = async () => {
-  const passwordHash = await bcrypt.hash("password123", 10);
-
-  return prisma.user.create({
-    data: {
-      email: "admin@example.com",
-      passwordHash,
-      role: "SUPER_ADMIN",
-      pharmacyId: null,
-    },
-  });
-};
+import { createSuperAdmin } from "./helpers/database";
 
 describe("POST /auth/login", () => {
   it("should login with valid credentials and return a token", async () => {
